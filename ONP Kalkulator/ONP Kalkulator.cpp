@@ -12,8 +12,6 @@
 
 using namespace std;
 
-const int MAX_S = 100;  // definiuje rozmiar stosu
-
 template <class Container>
 void split(const std::string& str, Container& cont)
 {
@@ -23,35 +21,92 @@ void split(const std::string& str, Container& cont)
 		std::back_inserter(cont));
 }
 
+const int ROZMIAR = 100;  // rozmiar stosu
+
+typedef int elementtype;
+typedef int position;
+
+class Stos
+{
+public:
+	int S[ROZMIAR];
+	position Top;   //szczyt stosu
+public:
+	Stos();
+	void Push(elementtype x);
+	void Pop();
+	bool Empty();
+	elementtype TopElem();
+	void Makenull();
+};
+
+Stos::Stos()
+{
+	Top = -1;
+}
+
+void Stos::Makenull()
+{
+	Top = -1;
+}
+
+void Stos::Push(elementtype x)
+{
+	if (Top < ROZMIAR - 1)
+	{
+		Top++;
+		S[Top] = x;
+	}
+}// PUSH
+
+void Stos::Pop()
+{
+	if (Top >= 0) Top--;
+}//POP
+
+bool Stos::Empty()
+{
+	return (Top == -1);
+}//Empty
+
+elementtype Stos::TopElem()
+{
+	if (Top >= 0) return S[Top];
+}
+
 double CalcONP(string ONP) {
-	double S[MAX_S];      // stos
-	int p = 0;            // wskaźnik stosu
-	string e;             // element wyrażenia ONP
+	Stos stos;
+
+	string e;
 	char f;
 	int g;
-	double v1, v2;         // argumenty operacji
+	double v1, v2;
 
 	vector<string> words;
 	split(ONP, words);
 
 
-	for (int i = 0; words.size() > i; i++)           // w pętli przetwarzamy wyrażenie ONP
+	for (int i = 0; words.size() > i; i++)
 	{
 		e = words[i];
 
 
-		if (istringstream(e) >> g)        // konwertujemy na liczbę i sprawdzamy, czy nie było błędu
-			S[p++] = g;      // umieszczamy ją na stosie
+		if (istringstream(e) >> g)       // konwertujemy na liczbę i sprawdzamy, czy nie było błędu
+			stos.Push(g);                // umieszczamy ją na stosie
 		else
-		{                   // operator
+		{
 			if ('~' == e[0]) {
-				v1 = S[--p];
+				v1 = stos.TopElem();
+				stos.Pop();
 				v1 = -v1;
 			}
 			else
 			{
-				v2 = S[--p];      // pobieramy ze stosu dwa argumenty
-				v1 = S[--p];
+				v2 = stos.TopElem();
+				stos.Pop();
+				v1 = stos.TopElem();
+				stos.Pop();
+
 				switch (e[0])      // wykonujemy operacje wg operatora
 				{
 				case '^': v1 = pow(v1,v2); break;
@@ -61,12 +116,12 @@ double CalcONP(string ONP) {
 				case '-': v1 -= v2; break;
 				}
 			}
-			S[p++] = v1;      // wynik umieszczamy na stosie
+			stos.Push(v1);
 		}
 
 	}
 
-	return 	S[--p];
+	return 	stos.TopElem();
 }
 
 int prio(char c)
@@ -84,10 +139,9 @@ int prio(char c)
 
 string ConvertONP(string normal) {
 	string ONP;
+	Stos stos;
 
-	char S[MAX_S];                          // stos operatorów
-	int p = 0;            // wskaźnik stosu
-	char c;                                    // kolejny znak wyrażenia
+	char c;
 	int i;
 
 	string s;
@@ -98,22 +152,25 @@ string ConvertONP(string normal) {
 	vector<string> words;
 	split(normal, words);
 
-	for (int a = 0; words.size() > a; a++)           // w pętli przetwarzamy wyrażenie ONP
+	for (int a = 0; words.size() > a; a++)
 	{
-		s = words[a];                                // czytamy znak
+		s = words[a];
 
 		if (istringstream(s) >> i) {
 			ONP.append(s + " ");
-			if ( p > 0 & S[p - 1] == '~')
+			if ( stos.Top > 0 & stos.TopElem() == '~')
 			{
-				ONP += S[--p];
+				//ONP += S[--p];
+				ONP += stos.TopElem();
+				stos.Pop();
 				ONP += " ";
 			}
 			continue;
-		}// konwertujemy na liczbę i sprawdzamy, czy nie było błędu
+		} // konwertujemy na liczbę i sprawdzamy, czy nie było błędu
+
 		c = s[0];
 
-		if (words.size() > a)
+		if (words.size() > a + 1)
 		{
 			next = words[a + 1][0];
 		}
@@ -132,42 +189,47 @@ string ConvertONP(string normal) {
 		}
 
 		if ((previous == ' ' && isdigit(next) && c == '-') || (!isdigit(previous) && isdigit(next) && c == '-')) {
-
-			S[p++] = '~';
+			stos.Push('~');
 			continue;
 		}
 
-		switch(c)                              // analizujemy odczytany znak
+		switch (c)
 		{
-		  case '(': S[p++] = '(';         // nawias otwierający zawsze na stos
-					 break;
-		  case ')': while (S[p - 1] != '(')  // nawias zamykający
-			  ONP += S[--p];
-			  ONP += " ";	
-			  p--;                     // usuwamy ze stosu nawias otwierający
+		case '(':
+			stos.Push('('); // nawias otwierający zawsze na stos
+			break;
+		case ')': 
+			while (stos.TopElem() != '('){  // nawias zamykający
+				ONP += stos.TopElem();
+				stos.Pop();
+			} 
+			stos.Pop(); // usuwamy ze stosu nawias otwierający
+			ONP += " ";	
 			break;
 		  case '+':;                           // operator
 		  case '-':;
 		  case '*':;
 		  case '/':;
-		  case '^': while (p)
+		  case '^': while (stos.Top)
 					 {
-					   if ((prio(c) == 3) || (prio(c) > prio(S[p - 1]))) break;
-					   ONP += S[--p];
-					   ONP += " ";// na wyjście przesyłamy ze stosu wszystkie
-					 }                              // operatory o wyższych priorytetach
-					 S[p++] = c;              // operator umieszczamy na stosie
-					 break;
+					   if ((prio(c) == 3) || (prio(c) > prio(stos.TopElem()))) break;
+					   ONP += stos.TopElem();
+					   stos.Pop();
+					   ONP += " "; // na wyjście przesyłamy ze stosu wszystkie
+					 }             // operatory o wyższych priorytetach
+					stos.Push(c);  // operator umieszczamy na stosie
+					break;
 		  default:   
 			ONP += c;
-			ONP += " ";		// inaczej znak przesyłamy na wyjście
+			ONP += " ";
 			break;
 		}
 	}
 
-	while (p) {
-		ONP += S[--p];
-		ONP += " ";// jeśli tak, na wyjście przesyłamy
+	while (stos.Top + 1) {
+		ONP += stos.TopElem();
+		stos.Pop();
+		ONP += " ";
 	}
 	return ONP;
 }
@@ -184,8 +246,6 @@ int main()
 {
 	string previousONP = "";
 
-
-	
 	bool isEnd = false;
 
 	while (!isEnd)
