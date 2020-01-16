@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iterator>
 #include <vector>
+#include <cmath>
 
 using namespace std;
 
@@ -43,16 +44,22 @@ double CalcONP(string ONP) {
 			S[p++] = g;      // umieszczamy ją na stosie
 		else
 		{                   // operator
-			v2 = S[--p];      // pobieramy ze stosu dwa argumenty
-			v1 = S[--p];
-			switch (e[0])      // wykonujemy operacje wg operatora
+			if ('~' == e[0]) {
+				v1 = S[--p];
+				v1 = -v1;
+			}
+			else
 			{
-			case '^': v1 = pow(v1,v2); break;
-			case '~': v1 = -v1; break;
-			case '*': v1 *= v2; break;
-			case '/': v1 /= v2; break;
-			case '+': v1 += v2; break;
-			case '-': v1 -= v2; break;
+				v2 = S[--p];      // pobieramy ze stosu dwa argumenty
+				v1 = S[--p];
+				switch (e[0])      // wykonujemy operacje wg operatora
+				{
+				case '^': v1 = pow(v1,v2); break;
+				case '*': v1 *= v2; break;
+				case '/': v1 /= v2; break;
+				case '+': v1 += v2; break;
+				case '-': v1 -= v2; break;
+				}
 			}
 			S[p++] = v1;      // wynik umieszczamy na stosie
 		}
@@ -85,18 +92,51 @@ string ConvertONP(string normal) {
 
 	string s;
 
+	char previous = ' ';
+	char next = ' ';
+
 	vector<string> words;
 	split(normal, words);
 
 	for (int a = 0; words.size() > a; a++)           // w pętli przetwarzamy wyrażenie ONP
 	{
-		s = words[a];                                // czytamy znak z wejścia
+		s = words[a];                                // czytamy znak
 
 		if (istringstream(s) >> i) {
 			ONP.append(s + " ");
+			if ( p > 0 & S[p - 1] == '~')
+			{
+				ONP += S[--p];
+				ONP += " ";
+			}
 			continue;
 		}// konwertujemy na liczbę i sprawdzamy, czy nie było błędu
 		c = s[0];
+
+		if (words.size() > a)
+		{
+			next = words[a + 1][0];
+		}
+		else
+		{
+			next = ' ';
+		}
+
+		if (0 < a)
+		{
+			previous = words[a - 1][0];
+		}
+		else
+		{
+			previous = ' ';
+		}
+
+		if ((previous == ' ' && isdigit(next) && c == '-') || (!isdigit(previous) && isdigit(next) && c == '-')) {
+
+			S[p++] = '~';
+			continue;
+		}
+
 		switch(c)                              // analizujemy odczytany znak
 		{
 		  case '(': S[p++] = '(';         // nawias otwierający zawsze na stos
